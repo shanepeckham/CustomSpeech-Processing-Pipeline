@@ -10,7 +10,7 @@ We will correlate recognised text with the official transcription using NLP sema
 
 ## The following parameters need to be populated. 
 
-*Slide sentences to the left and right for better matching but uses more CPU
+* Slide sentences to the left and right for better matching but uses more CPU
 ```WORD_SLIDE = 20```
 
 *Pad number of words onto left and right for better matching but uses more CPU
