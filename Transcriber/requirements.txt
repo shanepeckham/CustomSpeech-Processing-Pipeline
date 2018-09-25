@@ -1,0 +1,7 @@
+spacy
+fuzzywuzzy
+pandas
+jellyfish
+numpy
+scipy
+python-Levenshtein
