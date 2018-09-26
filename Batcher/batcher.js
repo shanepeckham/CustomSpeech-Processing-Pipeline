@@ -66,6 +66,7 @@ recognizer
     var result = {}
 
     recognizer.on('recognition', (e) => {
+      console.log(JSON.stringify(e));
       if (e.RecognitionStatus === 'Success') {
         if (result.filename === "") result.filename = files[index]; // first time setting file
         if (result.offset === -1) result.offset = e.Offset; // first time setting offset
@@ -75,9 +76,11 @@ recognizer
     
     recognizer.on('turn.end', (e) => {
       console.log(result);
-      results.push({ filename: result.filename, text: result.text, offset: result.offset });
-      Object.assign(result, emptyResult); // reset
-      
+      if (result.filename !== "") {
+        results.push({ filename: result.filename, text: result.text, offset: result.offset });
+        Object.assign(result, emptyResult); // reset
+      }
+
       if (index < files.length - 1)
         next(recognizer, files[++index]);
       else
@@ -98,7 +101,8 @@ function done() {
   console.log('Processing done.');
   var lines = "";
   results.forEach((val, index) => {
-    lines += `${val.offset}\t${val.filename}\t${val.text}\n`;
+    if (val.text != "") // skip files with silence
+      lines += `${val.offset}\t${val.filename}\t${val.text}\n`;
   });
   
   fs.writeFileSync(destFile, lines);
