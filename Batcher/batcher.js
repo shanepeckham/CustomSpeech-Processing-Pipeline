@@ -7,7 +7,7 @@ const fs = require('fs');
 const args = commandLineArgs([
   { name: "key", alias: "k", type: String },
   { name: "region", alias: "r", type: String, defaultValue: "westus" },
-  { name: "endpoint", alias: "e", type: String, defaultValue: "" },
+  { name: "endpoint", alias: "e", type: String },
   { name: "input", alias: "i", type: String, defaultOption: true },
   { name: "output", alias: "o", type: String, defaultValue: "out.txt" },
   { name: "help", alias: "h", type: Boolean, defaultValue: false }
@@ -15,6 +15,11 @@ const args = commandLineArgs([
 
 if (args.key === undefined) {
   console.error("Provide Speech API key as the --key parameter.");
+  args.help = true;
+}
+
+if (args.endpoint === undefined) {
+  console.error("Provide Speech API endpoint ID as the --endpoint parameter.");
   args.help = true;
 }
 
@@ -26,7 +31,7 @@ if (args.input === undefined) {
 if (args.help === true) {
   console.log("\nUsage:");
   console.log("node batcher.js [parameters]\n");
-  console.log("Parameters:\n--key <Speech API key>\t(Required) Speech API key\n--region <Region>\tSpeech API region. Default: westus\n--endpoint <ID>\t\tSpeech endpoint ID\n--input <directory>\tDirectory with WAV files\n--output <filename>\tOutput file.");
+  console.log("Parameters:\n--key <Speech API key>\t(Required) Speech API key\n--region <Region>\tSpeech API region. Default: westus\n--endpoint <ID>\t\t(Required) Speech endpoint ID\n--input <directory>\tDirectory with WAV files\n--output <filename>\tOutput file. Default: out.txt");
 
   process.exit(1);
 }
@@ -48,9 +53,10 @@ catch(err) {
   process.exit(2);
 }
 
-const files = fs.readdirSync(sourceDir);
+const files = fs.readdirSync(sourceDir).filter(function (file) { return file.endsWith(".wav"); });
 
 console.log(files);
+console.log(args);
 
 const recognizerOptions = {
   language: 'en-US',
