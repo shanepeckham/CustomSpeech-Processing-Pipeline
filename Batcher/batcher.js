@@ -36,7 +36,16 @@ const destFile = args.output;
 
 if (!fs.existsSync(sourceDir)) {
   console.error("Specified source directory doesn't exist.");
-  return;
+  process.exit(2);
+}
+
+// test write to see if target file is accessible
+try {
+  fs.writeFileSync(destFile, "");
+}
+catch(err) {
+  console.error("Unable to write to destination file.");
+  process.exit(2);
 }
 
 const files = fs.readdirSync(sourceDir);
