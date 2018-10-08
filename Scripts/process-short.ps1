@@ -1,4 +1,9 @@
-﻿# TXT file with links to source WAV files. One line = one file.
+﻿#
+# Before running this script, change initial variables to reflect your environment.
+# Run this script from an empty working folder - it will download and produce many files.
+#
+
+# TXT file with links to source WAV files. One line = one file.
 $sourceFileUrl = "https://<url>/<file>.txt"
 #$sourceFileUrl = $env:sourceFileUrl
 
