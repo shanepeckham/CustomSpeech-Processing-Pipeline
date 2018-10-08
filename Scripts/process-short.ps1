@@ -114,7 +114,7 @@ for ($i = 0; $i -lt $sourceWavs.Count; $i++)
         Copy-Item -Path "$rootDir\Chunks-$i\$filename" -Destination "$rootDir\Cleaned\$filename" # copy all to one place
     }
 
-    $cleaned += $present -replace '<OVERLAP>', '' # cleanup 2
+    $cleaned += $present
 }
 
 Write-Host "Transcribe done. Writing cleaned-transcript.txt"
