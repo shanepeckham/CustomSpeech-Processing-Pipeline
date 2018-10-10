@@ -254,14 +254,14 @@ def main(argv):
                 files_transcribed += 2
                 algo_results.append(match['Al'][match.index.values[0]])
 
-                if int(ticks_offset) < 1000:
-                    transcript.write(
-                        filename + "\t" + "<OVERLAP> " + match['Text'][match.index.values[0]] + " <OVERLAP/>" + "\n")
-                    offset_word -= 2
-                    api_results.update({filename: "<OVERLAP> " + api_text + " <OVERLAP/>"})
-                else:
-                    transcript.write(filename + "\t" + match['Text'][match.index.values[0]] + "\n")
-                    api_results.update({filename: api_text})
+            #    if int(ticks_offset) < 1000:
+            #        transcript.write(
+            #            filename + "\t" + "<OVERLAP> " + match['Text'][match.index.values[0]] + " <OVERLAP/>" + "\n")
+            #        offset_word -= 2
+            #        api_results.update({filename: "<OVERLAP> " + api_text + " <OVERLAP/>"})
+            #    else:
+                transcript.write(filename + "\t" + match['Text'][match.index.values[0]] + "\n")
+                api_results.update({filename: api_text})
 
                 nlp_offset_word = nlp(match['Text'][match.index.values[0]])
                 nlp_offset_word_len = len(nlp_offset_word) - 2
