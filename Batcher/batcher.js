@@ -120,7 +120,7 @@ function done() {
       lines += `${val.offset}\t${val.filename}\t${val.text}\n`;
   });
   
-  fs.writeFileSync(destFile, lines);
+  fs.writeFileSync(destFile, lines, "utf8");
   console.log(`Output file ${destFile} written.`);
 
   process.exit(1);
