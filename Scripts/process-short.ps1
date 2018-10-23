@@ -31,10 +31,6 @@ $speechRegion = "northeurope"
 $speechEndpoint = ""
 #$speechEndpoint = $env:speechEndpoint
 
-# How will datasets, models, tests and endpoints be called in Speech Service.
-$processName = ""
-#$processName = $env:processName
-
 #-----------------------------------------------------
 
 $rootDir = (Get-Item -Path ".\" -Verbose).FullName;
@@ -52,9 +48,9 @@ Invoke-WebRequest $ffmpegUrl -OutFile .\ffmpeg.zip
 Add-Type -Assembly System.IO.Compression.FileSystem
 [System.IO.Compression.ZipFile]::ExtractToDirectory("$rootDir\ffmpeg.zip", "$rootDir\ffmpeg")
 
-# Parse source files - each line is expected to be file URL
-$sourceWavs = (Invoke-WebRequest $sourceFileUrl | Select-Object -ExpandProperty Content) -Split '\n'
-$sourceTxts = (Invoke-WebRequest $sourceTranscriptUrl | Select-Object -ExpandProperty Content) -Split '\n'
+# Parse source files and remove empty lines - each line is expected to be file URL
+$sourceWavs = (Invoke-WebRequest $sourceFileUrl | Select-Object -ExpandProperty Content) -Split '\n' | ? {$_}
+$sourceTxts = (Invoke-WebRequest $sourceTranscriptUrl | Select-Object -ExpandProperty Content) -Split '\n' | ? {$_}
 
 New-Item .\SourceWavs -ItemType Directory -Force
 #$sourceWavs | % {$i = 0} { Invoke-WebRequest $_ -OutFile .\SourceWavs\$i.wav; $i++ } # only different syntax of downloading every file
