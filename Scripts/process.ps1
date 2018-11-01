@@ -138,7 +138,7 @@ Invoke-WebRequest $speechCliUrl -OutFile "speech-cli.zip"
 cd .\CLI\CustomSpeechCLI
 
 # Config CLI
-.\speech config set --key $speechKey --region $speechRegion
+.\speech config set --name Build --key $speechKey --region $speechRegion --select
 
 # Prepare ZIP and TXT for test and train datasets
 .\speech compile --audio "$rootDir\$processName-Cleaned" --transcript "$rootDir\$processName-cleaned-transcript.txt" --output "$rootDir\$processName-Compiled" --test-percentage 10
