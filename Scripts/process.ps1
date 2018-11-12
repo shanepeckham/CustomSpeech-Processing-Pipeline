@@ -59,27 +59,17 @@ Invoke-WebRequest $ffmpegUrl -OutFile .\ffmpeg.zip
 Add-Type -Assembly System.IO.Compression.FileSystem
 [System.IO.Compression.ZipFile]::ExtractToDirectory("$rootDir\ffmpeg.zip", "$rootDir\ffmpeg")
 
-# Parse source files and remove empty lines. Each line is expected to be a file URL.
-$sourceWavs = (Invoke-WebRequest $sourceFileUrl | Select -ExpandProperty Content) -Split '\n' | ? {$_}
-$sourceTxts = (Invoke-WebRequest $sourceTranscriptUrl | Select -ExpandProperty Content) -Split '\n' | ? {$_}
+# Download Speech CLI
+cd $rootDir
+New-Item "CLI" -ItemType Directory
+Invoke-WebRequest $speechCliUrl -OutFile "speech-cli.zip"
+[System.IO.Compression.ZipFile]::ExtractToDirectory("$rootDir\speech-cli.zip", "$rootDir\CLI");
+#cd $rootDir\CLI\SpeechCLI
 
-# Download WAV files locally
-New-Item .\SourceWavs -ItemType Directory -Force
+# Config CLI
+.\$rootDir\CLI\SpeechCLI\speech config set --name Build --key $speechKey --region $speechRegion --select
 
-# Inline syntax
-#$sourceWavs | % {$i = 0} { Invoke-WebRequest $_ -OutFile .\SourceWavs\$i.wav; $i++ }
-
-for ($i = 0; $i -lt $sourceWavs.Count; $i++) {  
-    # Download WAV file locally to prevent Storage transfer errors    
-    Invoke-WebRequest $sourceWavs[$i] -OutFile .\SourceWavs\$i.wav
-
-    # Run FFmpeg on source files - chunk & convert
-    New-Item .\Chunks-$i -ItemType Directory -Force
-    .\ffmpeg\ffmpeg.exe -i .\SourceWavs\$i.wav -acodec pcm_s16le -vn -ar 16000  -f segment -segment_time 10 -ac 1 .\Chunks-$i\$i-part%03d.wav
-
-    # Download full transcript
-    Invoke-WebRequest $sourceTxts[$i] -OutFile "$rootDir\$processName-source-transcript-$i.txt"
-}
+cd $rootDir
 
 # Get Batcher script
 # install dependencies
@@ -87,7 +77,40 @@ git clone https://github.com/shanepeckham/CustomSpeech-Processing-Pipeline.git
 cd $rootDir\CustomSpeech-Processing-Pipeline\Batcher
 npm install
 
+cd $rootDir
+
+# Parse source files and remove empty lines. Each line is expected to be a file URL.
+$sourceWavs = (Invoke-WebRequest $sourceFileUrl | Select -ExpandProperty Content) -Split '\n' | ? {$_}
+$sourceTxts = (Invoke-WebRequest $sourceTranscriptUrl | Select -ExpandProperty Content) -Split '\n' | ? {$_}
+
+# Download WAV files locally
+New-Item $rootDir\SourceWavs -ItemType Directory -Force
+
+# Inline syntax
+#$sourceWavs | % {$i = 0} { Invoke-WebRequest $_ -OutFile .\SourceWavs\$i.wav; $i++ }
+
+for ($i = 0; $i -lt $sourceWavs.Count; $i++) {  
+    # Download WAV file locally to prevent Storage transfer errors    
+    Invoke-WebRequest $sourceWavs[$i] -OutFile $rootDir\SourceWavs\$i.wav
+
+    # Run FFmpeg on source files - chunk & convert
+    New-Item .\Chunks-$i -ItemType Directory -Force
+    .\ffmpeg\ffmpeg.exe -i $rootDir\SourceWavs\$i.wav -acodec pcm_s16le -vn -ar 16000  -f segment -segment_time 10 -ac 1 $rootDir\Chunks-$i\$i-part%03d.wav
+
+    # Download full transcript
+    Invoke-WebRequest $sourceTxts[$i] -OutFile $rootDir\$processName-source-transcript-$i.txt
+}
+
 #TODO: if language data available, create baseline endpoint with language model first
+if ($sourceLanguageUrl) {
+    # data for language model ready - create it
+    Invoke-WebRequest $sourceLanguageUrl -OutFile $rootDir\$processName-language.txt
+
+    #.\speech
+
+}
+
+cd $rootDir\CustomSpeech-Processing-Pipeline\Batcher
 
 # Run Batcher, if there's no machine-transcript present
 # - machine transcript creation is time consuming, this allows to skip it if the process needs to be run again
@@ -130,15 +153,7 @@ for ($i = 0; $i -lt $sourceWavs.Count; $i++)
 Write-Host "Transcribe done. Writing cleaned-transcript.txt"
 $cleaned | Out-File "$rootDir\$processName-cleaned-transcript.txt"
 
-# Download Speech CLI
-cd $rootDir
-New-Item "CLI" -ItemType Directory
-Invoke-WebRequest $speechCliUrl -OutFile "speech-cli.zip"
-[System.IO.Compression.ZipFile]::ExtractToDirectory("$rootDir\speech-cli.zip", "$rootDir\CLI");
-cd .\CLI\CustomSpeechCLI
-
-# Config CLI
-.\speech config set --name Build --key $speechKey --region $speechRegion --select
+cd $rootDir\CLI\SpeechCLI
 
 # Prepare ZIP and TXT for test and train datasets
 .\speech compile --audio "$rootDir\$processName-Cleaned" --transcript "$rootDir\$processName-cleaned-transcript.txt" --output "$rootDir\$processName-Compiled" --test-percentage 10
