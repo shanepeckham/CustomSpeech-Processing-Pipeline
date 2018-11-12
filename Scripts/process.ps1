@@ -16,8 +16,8 @@ $sourceTranscriptUrl = $env:sourceTranscriptUrl
 $sourceLanguageUrl = $env:sourceLanguageUrl
 
 # ZIP file containing FFmpeg tool (expects ffmpeg.exe in root).
-$ffmpegUrl = "https://<url>/ffmpeg.zip"
-#$ffmpegUrl = $env:ffmpegUrl
+#$ffmpegUrl = "https://<url>/ffmpeg.zip"
+$ffmpegUrl = $env:ffmpegUrl
 
 # ZIP file containing Speech Service CLI tool
 #$speechCliUrl = "https://<url>.blob.core.windows.net/win-x64-280.zip"
