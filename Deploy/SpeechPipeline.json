@@ -1,0 +1,1101 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "deploymentName": {
+            "defaultValue": "SpeechTraining",
+            "type": "string"
+        },
+        "storageAccounts_speechfiles_name": {
+            "defaultValue": "speech",
+            "type": "string"
+        },
+        "accounts_speaker_recognition_service_name": {
+            "defaultValue": "speaker",
+            "type": "string"
+        },
+        "accounts_speech_service_name": {
+            "defaultValue": "speech",
+            "type": "string"
+        },
+        "workflows_enrollSpeaker_name": {
+            "defaultValue": "enroll",
+            "type": "string"
+        },
+        "connections_azuretables_name": {
+            "defaultValue": "azureblob",
+            "type": "string"
+        },
+        "workflows_speakerrecognition_name": {
+            "defaultValue": "recognise",
+            "type": "string"
+        },
+        "workflows_speech_job_name": {
+            "defaultValue": "submit",
+            "type": "string"
+        },
+        "workflows_speech_job_path": {
+            "defaultValue": "submit",
+            "type": "string"
+        },
+        "connections_aci_name": {
+            "defaultValue": "aci",
+            "type": "string"
+        },
+        "connections_azureblob_name": {
+            "defaultValue": "azureblob",
+            "type": "string"
+        },
+        "workflows_terminate_speech_job_name": {
+            "defaultValue": "terminate",
+            "type": "string"
+        }, 
+        "workflows_terminate_container_path": {
+            "defaultValue": "terminate",
+            "type": "string"
+        },
+        "logAnalyticsName": {
+            "defaultValue": "loganalytics",
+            "type": "string"
+        }
+    },
+    "variables": {
+        "storageAccounts_speechfiles_name": "[concat(parameters('storageAccounts_speechfiles_name'), uniqueString(parameters('deploymentName')))]",
+        "accounts_speaker_recognition_service_name": "[concat(parameters('accounts_speaker_recognition_service_name'), uniqueString(parameters('deploymentName')))]",
+        "accounts_speech_service_name": "[concat(parameters('accounts_speech_service_name'), uniqueString(parameters('deploymentName')))]",
+        "workflows_enrollSpeaker_name": "[concat(parameters('workflows_enrollSpeaker_name'), uniqueString(parameters('deploymentName')))]",
+        "connections_azuretables_name": "[concat(parameters('connections_azuretables_name'), uniqueString(parameters('deploymentName')))]",
+        "workflows_speakerrecognition_name": "[concat(parameters('workflows_speakerrecognition_name'), uniqueString(parameters('deploymentName')))]",
+        "workflows_speech_job_name": "[concat(parameters('workflows_speech_job_name'), uniqueString(parameters('deploymentName')))]",
+        "workflows_terminate_speech_job_name": "[concat(parameters('workflows_terminate_speech_job_name'), uniqueString(parameters('deploymentName')))]",
+        "logAnalyticsName": "[concat(parameters('logAnalyticsName'), uniqueString(parameters('deploymentName')))]"
+    },
+    "resources": [
+        {
+            "comments": "",
+            "type": "Microsoft.CognitiveServices/accounts",
+            "sku": {
+                "name": "S0"
+            },
+            "kind": "SpeakerRecognition",
+            "name": "[variables('accounts_speaker_recognition_service_name')]",
+            "apiVersion": "2016-02-01-preview",
+            "location": "westus",
+            "scale": null,
+            "properties": {},
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.CognitiveServices/accounts",
+            "sku": {
+              "name": "S0"
+            },
+            "kind": "SpeechServices",
+            "name": "[variables('accounts_speech_service_name')]",
+            "apiVersion": "2016-02-01-preview",
+            "location": "[resourceGroup().location]",
+            "properties": {},
+            "dependsOn": []
+        },
+        {
+            "comments": "",
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "Standard_RAGRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "name": "[variables('storageAccounts_speechfiles_name')]",
+            "apiVersion": "2018-07-01",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "scale": null,
+            "properties": {
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [],
+                    "ipRules": [],
+                    "defaultAction": "Allow"
+                },
+                "supportsHttpsTrafficOnly": true,
+                "encryption": {
+                    "services": {
+                        "file": {
+                            "enabled": true
+                        },
+                        "blob": {
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "accessTier": "Hot"
+            },
+            "resources": [
+                {
+                  "type": "blobServices/containers",
+                  "apiVersion": "2018-03-01-preview",
+                  "name": "default/speakers",
+                  "dependsOn": [
+                    "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name'))]"
+                  ],
+                  "properties": {
+                    "publicAccess": "None"
+                  }
+                },
+                {
+                    "type": "blobServices/containers",
+                    "apiVersion": "2018-03-01-preview",
+                    "name": "default/files",
+                    "dependsOn": [
+                      "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name'))]"
+                    ],
+                    "properties": {
+                      "publicAccess": "None"
+                    }
+                  }
+              ],
+            "dependsOn": []
+        },
+        {
+            "comments": "",
+            "type": "Microsoft.Logic/workflows",
+            "name": "[variables('workflows_enrollSpeaker_name')]",
+            "apiVersion": "2017-07-01",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "scale": null,
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "request": {
+                            "type": "Request",
+                            "kind": "Http",
+                            "inputs": {
+                                "schema": {
+                                    "properties": {
+                                        "fileURL": {
+                                            "type": "string"
+                                        },
+                                        "jobName": {
+                                            "type": "string"
+                                        },
+                                        "shortAudio": {
+                                            "type": "string"
+                                        },
+                                        "speakerName": {
+                                            "type": "string"
+                                        },
+                                        "speakerURL": {
+                                            "type": "string"
+                                        },
+                                        "speechKey": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "actions": {
+                        "Append_to_string_variable": {
+                            "runAfter": {
+                                "Initialize_variable": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                                "name": "EnrollURL",
+                                "value": "@{variables('ProfileId')}@{variables('EnrollURLQuerystring')}"
+                            }
+                        },
+                        "Create_Enrollment": {
+                            "runAfter": {
+                                "Get_Audio_File": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Http",
+                            "inputs": {
+                                "body": "@body('Get_Audio_File')",
+                                "headers": {
+                                    "Content-Type": "audio/wav; codec=\\\"audio/pcm\\\"; samplerate=22000",
+                                    "Ocp-Apim-Subscription-Key": "@triggerBody()['speechKey']"
+                                },
+                                "method": "POST",
+                                "uri": "@variables('EnrollURL')"
+                            }
+                        },
+                        "Create_User_Profile": {
+                            "runAfter": {},
+                            "type": "Http",
+                            "inputs": {
+                                "body": {
+                                    "locale": "en-us"
+                                },
+                                "headers": {
+                                    "Ocp-Apim-Subscription-Key": "@triggerBody()['speechKey']"
+                                },
+                                "method": "POST",
+                                "uri": "@triggerBody()?['speakerURL']"
+                            }
+                        },
+                        "Create_speakerName_file": {
+                            "runAfter": {
+                                "Create_Enrollment": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": "@triggerBody()?['speakerName']",
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/datasets/default/files",
+                                "queries": {
+                                    "folderPath": "/speakers",
+                                    "name": "@{variables('ProfileId')}.txt",
+                                    "queryParametersSingleEncoded": true
+                                }
+                            },
+                            "runtimeConfiguration": {
+                                "contentTransfer": {
+                                    "transferMode": "Chunked"
+                                }
+                            }
+                        },
+                        "Get_Audio_File": {
+                            "runAfter": {
+                                "Append_to_string_variable": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Http",
+                            "inputs": {
+                                "method": "GET",
+                                "uri": "@triggerBody()?['fileURL']"
+                            }
+                        },
+                        "Initialize_variable": {
+                            "runAfter": {
+                                "Initialize_variable_EnrollURL_Querystring": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "ProfileId",
+                                        "type": "String",
+                                        "value": "@{body('Create_User_Profile')['identificationProfileId']}"
+                                    }
+                                ]
+                            }
+                        },
+                        "Initialize_variable_EnrollURL": {
+                            "runAfter": {
+                                "Create_User_Profile": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "EnrollURL",
+                                        "type": "String",
+                                        "value": "https://westus.api.cognitive.microsoft.com/spid/v1.0/identificationProfiles/"
+                                    }
+                                ]
+                            }
+                        },
+                        "Initialize_variable_EnrollURL_Querystring": {
+                            "runAfter": {
+                                "Initialize_variable_EnrollURL": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "EnrollURLQuerystring",
+                                        "type": "String",
+                                        "value": "/enroll?shortAudio=true"
+                                    }
+                                ]
+                            }
+                        },
+                        "Response": {
+                            "runAfter": {
+                                "Create_speakerName_file": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Response",
+                            "inputs": {
+                                "body": "@{body('Create_User_Profile')}@{body('Create_Enrollment')} ",
+                                "statusCode": 200
+                            }
+                        }
+                    },
+                    "outputs": {}
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "azureblob": {
+                                "connectionId": "[resourceId('Microsoft.Web/connections', 'azureblob')]",
+                                "connectionName": "azureblob",
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azureblob')]"
+                            }
+                        }
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name'))]",
+                "[resourceId('Microsoft.Web/connections', 'azureblob')]"
+            ]
+        },
+        {
+            "comments": "",
+            "type": "Microsoft.Logic/workflows",
+            "name": "[variables('workflows_speakerrecognition_name')]",
+            "apiVersion": "2017-07-01",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "scale": null,
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "request": {
+                            "type": "Request",
+                            "kind": "Http",
+                            "inputs": {
+                                "schema": {
+                                    "properties": {
+                                        "fileURL": {
+                                            "type": "string"
+                                        },
+                                        "identificationProfileIds": {
+                                            "type": "string"
+                                        },
+                                        "shortAudio": {
+                                            "type": "string"
+                                        },
+                                        "speakerURL": {
+                                            "type": "string"
+                                        },
+                                        "speechKey": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "actions": {
+                        "Append_to_string_variable_SpeakerRecognitionQueryString": {
+                            "runAfter": {
+                                "Initialize_variable_SpeakerRecognitionQueryString": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "AppendToStringVariable",
+                            "inputs": {
+                                "name": "SpeakerRecognitionQueryString",
+                                "value": "@{variables('identificationProfileIds')}@{variables('shortAudio')}"
+                            }
+                        },
+                        "Call_Speaker_Recognition": {
+                            "runAfter": {
+                                "Append_to_string_variable_SpeakerRecognitionQueryString": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Http",
+                            "inputs": {
+                                "body": "@body('Get_Audio_File')",
+                                "headers": {
+                                    "Content-Type": "audio/wav; codec=\\\"audio/pcm\\\"; samplerate=22000",
+                                    "Ocp-Apim-Subscription-Key": "@triggerBody()['speechKey']"
+                                },
+                                "method": "POST",
+                                "uri": "@variables('SpeakerRecognitionQueryString')"
+                            }
+                        },
+                        "Get_Audio_File": {
+                            "runAfter": {
+                                "Initialize_Variable_JobStatus": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Http",
+                            "inputs": {
+                                "headers": {
+                                    "@triggerBody()['fileURL']": ""
+                                },
+                                "method": "GET",
+                                "uri": "@triggerBody()['fileURL']"
+                            }
+                        },
+                        "Initialize_Variable_JobStatus": {
+                            "runAfter": {},
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "Jobstatus",
+                                        "type": "String"
+                                    }
+                                ]
+                            }
+                        },
+                        "Initialize_variable_SpeakerRecognitionQueryString": {
+                            "runAfter": {
+                                "Initialize_variable_shortAudio": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "SpeakerRecognitionQueryString",
+                                        "type": "String",
+                                        "value": "@triggerBody()?['speakerURL']"
+                                    }
+                                ]
+                            }
+                        },
+                        "Initialize_variable_shortAudio": {
+                            "runAfter": {
+                                "Set_Variable_identificationProfileIds": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "shortAudio",
+                                        "type": "String",
+                                        "value": "&shortAudio=@{triggerBody()?['shortAudio']}"
+                                    }
+                                ]
+                            }
+                        },
+                        "Response": {
+                            "runAfter": {
+                                "Until_Job_is_not_finished": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Response",
+                            "inputs": {
+                                "body": "@body('Get_speakerName_from_blob')",
+                                "statusCode": 200
+                            }
+                        },
+                        "Set_Variable_identificationProfileIds": {
+                            "runAfter": {
+                                "Get_Audio_File": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "identificationProfileIds",
+                                        "type": "String",
+                                        "value": "identificationProfileIds=@{triggerBody()?['identificationProfileIds']}"
+                                    }
+                                ]
+                            }
+                        },
+                        "Until_Job_is_not_finished": {
+                            "actions": {
+                                "Get_Speaker_Recognition_Status": {
+                                    "runAfter": {},
+                                    "type": "Http",
+                                    "inputs": {
+                                        "headers": {
+                                            "Ocp-Apim-Subscription-Key": "@triggerBody()['speechKey']"
+                                        },
+                                        "method": "GET",
+                                        "uri": "@outputs('Call_Speaker_Recognition')['headers']['Operation-Location']"
+                                    }
+                                },
+                                "Get_speakerName_from_blob": {
+                                    "runAfter": {
+                                        "Set_variable_JobStatus": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                            }
+                                        },
+                                        "method": "get",
+                                        "path": "/datasets/default/files/@{encodeURIComponent(encodeURIComponent('/speakers/', body('Get_Speaker_Recognition_Status')['processingResult']?['identifiedProfileId'], '.txt'))}/content",
+                                        "queries": {
+                                            "inferContentType": true
+                                        }
+                                    }
+                                },
+                                "Set_variable_JobStatus": {
+                                    "runAfter": {
+                                        "Get_Speaker_Recognition_Status": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "type": "SetVariable",
+                                    "inputs": {
+                                        "name": "Jobstatus",
+                                        "value": "@body('Get_Speaker_Recognition_Status')?['status']"
+                                    }
+                                }
+                            },
+                            "runAfter": {
+                                "Call_Speaker_Recognition": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "expression": "@equals(variables('Jobstatus'), 'succeeded')",
+                            "limit": {
+                                "count": 60,
+                                "timeout": "PT1H"
+                            },
+                            "type": "Until"
+                        }
+                    },
+                    "outputs": {}
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "azureblob": {
+                                "connectionId": "[resourceId('Microsoft.Web/connections', 'azureblob')]",
+                                "connectionName": "azureblob",
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azureblob')]"
+                            }
+                        }
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name'))]",
+                "[resourceId('Microsoft.Web/connections', 'azureblob')]"
+            ]
+        },
+        {
+            "comments": "",
+            "type": "Microsoft.Logic/workflows",
+            "name": "[variables('workflows_speech_job_name')]",
+            "apiVersion": "2017-07-01",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "scale": null,
+            "properties": {
+                "state": "Enabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        }
+                    },
+                    "triggers": {
+                        "manual": {
+                            "type": "Request",
+                            "kind": "Http",
+                            "inputs": {
+                                "schema": {
+                                    "properties": {
+                                        "audioBlobLocation": {
+                                            "type": "string"
+                                        },
+                                        "chunkLength": {
+                                            "type": "string"
+                                        },
+                                        "cleanUpKey": {
+                                            "type": "string"
+                                        },
+                                        "containerImage": {
+                                            "type": "string"
+                                        },
+                                        "languageModelId": {
+                                            "type": "string"
+                                        },
+                                        "location": {
+                                            "type": "string"
+                                        },
+                                        "processName": {
+                                            "type": "string"
+                                        },
+                                        "removeSilence": {
+                                            "type": "string"
+                                        },
+                                        "resourceGroup": {
+                                            "type": "string"
+                                        },
+                                        "silenceDuration": {
+                                            "type": "string"
+                                        },
+                                        "silenceThreshold": {
+                                            "type": "string"
+                                        },
+                                        "speechEndpoint": {
+                                            "type": "string"
+                                        },
+                                        "speechKey": {
+                                            "type": "string"
+                                        },
+                                        "subscriptionKey": {
+                                            "type": "string"
+                                        },
+                                        "testPercentage": {
+                                            "type": "string"
+                                        },
+                                        "textBlobLocation": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "actions": {
+                        "Create_audioInput_file_from_URIs": {
+                            "runAfter": {
+                                "Generate_URI_for_each_audioFile": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": "@variables('audioFiles')",
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/datasets/default/files",
+                                "queries": {
+                                    "folderPath": "@triggerBody()?['audioBlobLocation']",
+                                    "name": "audioInput.txt",
+                                    "queryParametersSingleEncoded": true
+                                }
+                            },
+                            "runtimeConfiguration": {
+                                "contentTransfer": {
+                                    "transferMode": "Chunked"
+                                }
+                            }
+                        },
+                        "Create_textInput_file_from_URIs": {
+                            "runAfter": {
+                                "Generate_URI_for_each_textFile": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": "@variables('textFiles')",
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/datasets/default/files",
+                                "queries": {
+                                    "folderPath": "@triggerBody()?['textBlobLocation']",
+                                    "name": "textInput.txt",
+                                    "queryParametersSingleEncoded": true
+                                }
+                            },
+                            "runtimeConfiguration": {
+                                "contentTransfer": {
+                                    "transferMode": "Chunked"
+                                }
+                            }
+                        },
+                        "Generate_URI_for_each_audioFile": {
+                            "foreach": "@body('List_audioFiles_in_storage_account')?['value']",
+                            "actions": {
+                                "If_not_generated_file": {
+                                    "actions": {
+                                        "Append_URI_to_audioFiles_variable": {
+                                            "runAfter": {
+                                                "Generate_current_audioFile_URI": [
+                                                    "Succeeded"
+                                                ]
+                                            },
+                                            "type": "AppendToStringVariable",
+                                            "inputs": {
+                                                "name": "audioFiles",
+                                                "value": "@{body('Generate_current_audioFile_URI')?['WebUrl']}\n"
+                                            }
+                                        },
+                                        "Generate_current_audioFile_URI": {
+                                            "runAfter": {},
+                                            "type": "ApiConnection",
+                                            "inputs": {
+                                                "body": {
+                                                    "Permissions": "Read"
+                                                },
+                                                "host": {
+                                                    "connection": {
+                                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                                    }
+                                                },
+                                                "method": "post",
+                                                "path": "/datasets/default/CreateSharedLinkByPath",
+                                                "queries": {
+                                                    "path": "@{triggerBody()?['audioBlobLocation']}/@{items('Generate_URI_for_each_audioFile')?['Name']}"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "runAfter": {},
+                                    "expression": {
+                                        "and": [
+                                            {
+                                                "not": {
+                                                    "equals": [
+                                                        "@items('Generate_URI_for_each_audioFile')?['Name']",
+                                                        "audioInput.txt"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "type": "If"
+                                }
+                            },
+                            "runAfter": {
+                                "List_audioFiles_in_storage_account": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Foreach"
+                        },
+                        "Generate_URI_for_each_textFile": {
+                            "foreach": "@body('List_textFiles_in_storage_account')?['value']",
+                            "actions": {
+                                "If_of_.txt_type_and_not_generated_file": {
+                                    "actions": {
+                                        "Append_URI_to_textFiles_variable": {
+                                            "runAfter": {
+                                                "Generate_current_item_URI": [
+                                                    "Succeeded"
+                                                ]
+                                            },
+                                            "type": "AppendToStringVariable",
+                                            "inputs": {
+                                                "name": "textFiles",
+                                                "value": "@{body('Generate_current_item_URI')?['WebUrl']}\n"
+                                            }
+                                        },
+                                        "Generate_current_item_URI": {
+                                            "runAfter": {},
+                                            "type": "ApiConnection",
+                                            "inputs": {
+                                                "body": {
+                                                    "Permissions": "Read"
+                                                },
+                                                "host": {
+                                                    "connection": {
+                                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                                    }
+                                                },
+                                                "method": "post",
+                                                "path": "/datasets/default/CreateSharedLinkByPath",
+                                                "queries": {
+                                                    "path": "@{triggerBody()?['textBlobLocation']}/@{items('Generate_URI_for_each_textFile')?['Name']}"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "runAfter": {},
+                                    "expression": {
+                                        "and": [
+                                            {
+                                                "endsWith": [
+                                                    "@items('Generate_URI_for_each_textFile')?['Name']",
+                                                    ".txt"
+                                                ]
+                                            },
+                                            {
+                                                "not": {
+                                                    "equals": [
+                                                        "@items('Generate_URI_for_each_textFile')?['Name']",
+                                                        "textInput.txt"
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "not": {
+                                                    "equals": [
+                                                        "@items('Generate_URI_for_each_textFile')?['Name']",
+                                                        "language.txt"
+                                                    ]
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "type": "If"
+                                }
+                            },
+                            "runAfter": {
+                                "List_textFiles_in_storage_account": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Foreach"
+                        },
+                        "Generate_audioInput_file_URI": {
+                            "runAfter": {
+                                "Generate_textInput_file__URI": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": {
+                                    "Permissions": "Read"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/datasets/default/CreateSharedLinkByPath",
+                                "queries": {
+                                    "path": "@{triggerBody()?['audioBlobLocation']}/audioInput.txt"
+                                }
+                            }
+                        },
+                        "Generate_languageInput_file_URI": {
+                            "runAfter": {
+                                "Generate_audioInput_file_URI": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": {
+                                    "Permissions": "Read"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/datasets/default/CreateSharedLinkByPath",
+                                "queries": {
+                                    "path": "@{triggerBody()?['textBlobLocation']}/language.txt"
+                                }
+                            }
+                        },
+                        "Generate_textInput_file__URI": {
+                            "runAfter": {
+                                "Create_audioInput_file_from_URIs": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "body": {
+                                    "Permissions": "Read"
+                                },
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                    }
+                                },
+                                "method": "post",
+                                "path": "/datasets/default/CreateSharedLinkByPath",
+                                "queries": {
+                                    "path": "@{triggerBody()?['textBlobLocation']}/textInput.txt"
+                                }
+                            }
+                        },
+                        "Initialize_meaningful_identifier": {
+                            "runAfter": {
+                                "Initialize_the_audioFiles_variable": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "processID",
+                                        "type": "String",
+                                        "value": "@triggerBody()?['processName']"
+                                    }
+                                ]
+                            }
+                        },
+                        "Initialize_the_audioFiles_variable": {
+                            "runAfter": {
+                                "Initialize_the_textFiles_variable": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "audioFiles",
+                                        "type": "String"
+                                    }
+                                ]
+                            }
+                        },
+                        "Initialize_the_textFiles_variable": {
+                            "runAfter": {},
+                            "type": "InitializeVariable",
+                            "inputs": {
+                                "variables": [
+                                    {
+                                        "name": "textFiles",
+                                        "type": "String"
+                                    }
+                                ]
+                            }
+                        },
+                        "List_audioFiles_in_storage_account": {
+                            "runAfter": {
+                                "Create_textInput_file_from_URIs": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/default/foldersV2/@{encodeURIComponent(encodeURIComponent(triggerBody()?['audioBlobLocation']))}",
+                                "queries": {
+                                    "useFlatListing": false
+                                }
+                            }
+                        },
+                        "List_textFiles_in_storage_account": {
+                            "runAfter": {
+                                "Initialize_meaningful_identifier": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ApiConnection",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['azureblob']['connectionId']"
+                                    }
+                                },
+                                "method": "get",
+                                "path": "/datasets/default/foldersV2/@{encodeURIComponent(encodeURIComponent(triggerBody()?['textBlobLocation']))}",
+                                "queries": {
+                                    "useFlatListing": false
+                                }
+                            }
+                        },
+                        "Response": {
+                            "runAfter": {
+                                "Generate_languageInput_file_URI": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Response",
+                            "kind": "Http",
+                            "inputs": {
+                                "body": "Submitted process @{variables('processID')}",
+                                "statusCode": 200
+                            }
+                        }
+                    },
+                    "outputs": {}
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                              "azureblob": {
+                                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('connections_azureblob_name'))]",
+                                "connectionName": "azureblob",
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azureblob')]"
+                            }
+                        }
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name'))]",
+                "[resourceId('Microsoft.Web/connections', 'azureblob')]"
+            ]
+        },
+        {
+            "comments": "",
+            "type": "Microsoft.Web/connections",
+            "name": "azureblob",
+            "apiVersion": "2016-06-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "displayName": "speech-blob",
+                "customParameterValues": {},
+                "parameterValues": {
+                    "accountName": "[variables('storageAccounts_speechfiles_name')]",
+                    "accessKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value]"
+                  },
+                "api": {
+                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azureblob')]"
+                }
+            },
+            "dependsOn": ["[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name'))]"]
+        }
+    ]
+}
