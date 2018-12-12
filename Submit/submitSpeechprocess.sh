@@ -18,7 +18,7 @@ TESTPERCENTAGE=''
 REMOVESILENCE=''
 SILENCEDURATION=''
 SILENCETHRESHOLD=''
-SUBMITURL='https://prod-15.westeurope.logic.azure.com:443/workflows/1033c4d1813042f98e9c6d05ba5c7e3a/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-nbpZml-jrNj7BoqP85hh9E_bq3zr5QQb78OJH550_8'
+SUBMITURL='https://prod-15.westeurope.logic.azure.com:443/workflows//triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-nbpZml-jrNj7BoqP85hh9E_bq3zr5QQb78OJH550_8'
 
 HTTP=$(curl --header "Content-Type: application/json" \
   --request POST \
