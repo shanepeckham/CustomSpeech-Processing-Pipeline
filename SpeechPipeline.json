@@ -741,113 +741,6 @@
                                 }
                             }
                         },
-                        "Create_container_group_with_set_parameters": {
-                            "runAfter": {
-                                "Generate_languageInput_file_URI": [
-                                    "Succeeded"
-                                ]
-                            },
-                            "type": "ApiConnection",
-                            "inputs": {
-                                "body": {
-                                    "location": "@triggerBody()?['location']",
-                                    "properties": {
-                                        "containers": [
-                                            {
-                                                "name": "c-@{variables('processID')}",
-                                                "properties": {
-                                                    "environmentVariables": [
-                                                        {
-                                                            "name": "languageModelId",
-                                                            "value": "@triggerBody()?['languageModelId']"
-                                                        },
-                                                        {
-                                                            "name": "processName",
-                                                            "value": "@variables('processID')"
-                                                        },
-                                                        {
-                                                            "name": "audioFilesList",
-                                                            "value": "@body('Generate_audioInput_file_URI')?['WebUrl']"
-                                                        },
-                                                        {
-                                                            "name": "transcriptFilesList",
-                                                            "value": "@body('Generate_textInput_file__URI')?['WebUrl']"
-                                                        },
-                                                        {
-                                                            "name": "speechEndpoint",
-                                                            "value": "@triggerBody()?['speechEndpoint']"
-                                                        },
-                                                        {
-                                                            "name": "speechKey",
-                                                            "value": "@triggerBody()?['speechKey']"
-                                                        },
-                                                        {
-                                                            "name": "speechRegion",
-                                                            "value": "@triggerBody()?['location']"
-                                                        },
-                                                        {
-                                                            "name": "webHook",
-                                                            "value": "CHANGEME"
-                                                        },
-                                                        {
-                                                            "name": "resourceGroup",
-                                                            "value": "@triggerBody()?['resourceGroup']"
-                                                        },
-                                                        {
-                                                            "name": "subscriptionKey",
-                                                            "value": "@triggerBody()?['subscriptionKey']"
-                                                        },
-                                                        {
-                                                            "name": "languageModelFile",
-                                                            "value": "@body('Generate_languageInput_file_URI')?['WebUrl']"
-                                                        },
-                                                        {
-                                                            "name": "chunkLength",
-                                                            "value": "@triggerBody()?['chunkLength']"
-                                                        },
-                                                        {
-                                                            "name": "testPercentage",
-                                                            "value": "@triggerBody()?['testPercentage']"
-                                                        },
-                                                        {
-                                                            "name": "removeSilence",
-                                                            "value": "@triggerBody()?['removeSilence']"
-                                                        },
-                                                        {
-                                                            "name": "silenceDuration",
-                                                            "value": "@triggerBody()?['silenceDuration']"
-                                                        },
-                                                        {
-                                                            "name": "silenceThreshold",
-                                                            "value": "@triggerBody()?['silenceThreshold']"
-                                                        }
-                                                    ],
-                                                    "image": "@triggerBody()?['containerImage']",
-                                                    "resources": {
-                                                        "requests": {
-                                                            "cpu": 2,
-                                                            "memoryInGB": 3.5
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        ],
-                                        "osType": "Linux",
-                                        "restartPolicy": "Never"
-                                    }
-                                },
-                                "host": {
-                                    "connection": {
-                                        "name": "@parameters('$connections')['aci']['connectionId']"
-                                    }
-                                },
-                                "method": "put",
-                                "path": "[parameters('workflows_speech_job_path')]",
-                                "queries": {
-                                    "x-ms-api-version": "2017-10-01-preview"
-                                }
-                            }
-                        },
                         "Create_textInput_file_from_URIs": {
                             "runAfter": {
                                 "Generate_URI_for_each_textFile": [
@@ -1163,6 +1056,19 @@
                                     "useFlatListing": false
                                 }
                             }
+                        },
+                        "Response": {
+                            "runAfter": {
+                                "Generate_languageInput_file_URI": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Response",
+                            "kind": "Http",
+                            "inputs": {
+                                "body": "Submitted process @{variables('processID')}",
+                                "statusCode": 200
+                            }
                         }
                     },
                     "outputs": {}
@@ -1170,12 +1076,7 @@
                 "parameters": {
                     "$connections": {
                         "value": {
-                            "aci": {
-                                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('connections_aci_name'))]",
-                                "connectionName": "aci",
-                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/aci')]"
-                            },
-                            "azureblob": {
+                              "azureblob": {
                                 "connectionId": "[resourceId('Microsoft.Web/connections', parameters('connections_azureblob_name'))]",
                                 "connectionName": "azureblob",
                                 "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azureblob')]"
