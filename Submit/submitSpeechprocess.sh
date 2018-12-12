@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # First run az login 
-RESOURCE_GROUP='btsportshack'
+RESOURCE_GROUP=''
 PROCESSNAME='nytest'
 IMAGE='msimecek/speech-pipeline:0.15-full'
 LANGUAGEMODELID=''
