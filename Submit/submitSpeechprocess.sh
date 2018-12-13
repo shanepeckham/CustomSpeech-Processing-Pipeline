@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
 
 # First run az login 
-RESOURCE_GROUP=''
+RESOURCE_GROUP='speech'
 PROCESSNAME='nytest'
 IMAGE='msimecek/speech-pipeline:0.15-full'
 LANGUAGEMODELID=''
 AUDIOFILESLIST=''
 TRANSCRIPTFILESLIST=''
-SPEECHENDPOINT=''
-SPEECHKEY=''
-SPEECHREGION='westeurope'
 WEBHOOK='localhost'
 SUBSCRIPTIONKEY=''
 LANGUAGEMODELFILE=''
@@ -18,7 +15,16 @@ TESTPERCENTAGE=''
 REMOVESILENCE=''
 SILENCEDURATION=''
 SILENCETHRESHOLD=''
-SUBMITURL='https://prod-15.westeurope.logic.azure.com:443/workflows//triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-nbpZml-jrNj7BoqP85hh9E_bq3zr5QQb78OJH550_8'
+SUBMITURL='https://prod-15.westeurope.logic.azure.com:443/workflows//triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-nbpZml-'
+SPEECHNAME=$(az cognitiveservices list -g $RESOURCE_GROUP --query "[?kind=='SpeechServices'].name" --output tsv) 
+SPEAKERNAME=$(az cognitiveservices list -g $RESOURCE_GROUP --query "[?kind=='SpeakerRecognition'].name" --output tsv) 
+SPEECHKEY=$(az cognitiveservices account keys list -g $RESOURCE_GROUP -n $SPEECHNAME --query "[key1]" --output tsv)
+SPEAKERKEY=$(az cognitiveservices account keys list -g $RESOURCE_GROUP -n $SPEAKERNAME --query "[key1]" --output tsv)
+SPEECHREGION=$(az cognitiveservices list -g $RESOURCE_GROUP --query "[?kind=='SpeechServices'].location" --output tsv) 
+SPEAKERREGION=$(az cognitiveservices list -g $RESOURCE_GROUP --query "[?kind=='SpeakerRecognition'].location" --output tsv) 
+SPEECHENDPOINT=$(az cognitiveservices list -g $RESOURCE_GROUP --query "[?kind=='SpeechServices'].endpoint" --output tsv)
+SUBSCRIPTIONKEY=$(az account list --query "[?isDefault].id" --output tsv --all)
+TENANT=$(az account list --query "[?isDefault].tenantId" --output tsv --all)
 
 HTTP=$(curl --header "Content-Type: application/json" \
   --request POST \
