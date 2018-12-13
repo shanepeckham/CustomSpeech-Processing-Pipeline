@@ -22,10 +22,6 @@
             "defaultValue": "enroll",
             "type": "string"
         },
-        "connections_azuretables_name": {
-            "defaultValue": "azureblob",
-            "type": "string"
-        },
         "workflows_speakerrecognition_name": {
             "defaultValue": "recognise",
             "type": "string"
@@ -34,28 +30,16 @@
             "defaultValue": "submit",
             "type": "string"
         },
-        "workflows_speech_job_path": {
-            "defaultValue": "submit",
-            "type": "string"
-        },
-        "connections_aci_name": {
-            "defaultValue": "aci",
-            "type": "string"
-        },
         "connections_azureblob_name": {
             "defaultValue": "azureblob",
             "type": "string"
         },
-        "workflows_terminate_speech_job_name": {
-            "defaultValue": "terminate",
-            "type": "string"
-        }, 
-        "workflows_terminate_container_path": {
-            "defaultValue": "terminate",
+        "hostingPlanName": {
+            "defaultValue": "speechplan",
             "type": "string"
         },
-        "logAnalyticsName": {
-            "defaultValue": "loganalytics",
+        "functionAppName": {
+            "defaultValue": "speechapp",
             "type": "string"
         }
     },
@@ -64,11 +48,10 @@
         "accounts_speaker_recognition_service_name": "[concat(parameters('accounts_speaker_recognition_service_name'), uniqueString(parameters('deploymentName')))]",
         "accounts_speech_service_name": "[concat(parameters('accounts_speech_service_name'), uniqueString(parameters('deploymentName')))]",
         "workflows_enrollSpeaker_name": "[concat(parameters('workflows_enrollSpeaker_name'), uniqueString(parameters('deploymentName')))]",
-        "connections_azuretables_name": "[concat(parameters('connections_azuretables_name'), uniqueString(parameters('deploymentName')))]",
         "workflows_speakerrecognition_name": "[concat(parameters('workflows_speakerrecognition_name'), uniqueString(parameters('deploymentName')))]",
         "workflows_speech_job_name": "[concat(parameters('workflows_speech_job_name'), uniqueString(parameters('deploymentName')))]",
-        "workflows_terminate_speech_job_name": "[concat(parameters('workflows_terminate_speech_job_name'), uniqueString(parameters('deploymentName')))]",
-        "logAnalyticsName": "[concat(parameters('logAnalyticsName'), uniqueString(parameters('deploymentName')))]"
+        "hostingPlanName": "[concat(parameters('hostingPlanName'), uniqueString(parameters('deploymentName')))]",
+        "functionAppName": "[concat(parameters('functionAppName'), uniqueString(parameters('deploymentName')))]"
     },
     "resources": [
         {
@@ -96,6 +79,17 @@
             "location": "[resourceGroup().location]",
             "properties": {},
             "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2015-04-01",
+            "name": "[variables('hostingPlanName')]",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "name": "[variables('hostingPlanName')]",
+                "computeMode": "Dynamic",
+                "sku": "Dynamic"
+            }
         },
         {
             "comments": "",
@@ -156,6 +150,78 @@
                   }
               ],
             "dependsOn": []
+        },
+        {
+            "apiVersion": "2015-08-01",
+            "type": "Microsoft.Web/sites",
+            "name": "[variables('functionAppName')]",
+            "location": "[resourceGroup().location]",
+            "kind": "functionapp",
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+                "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name'))]"
+            ],
+            "properties": {
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                            "name": "AzureWebJobsDashboard",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccounts_speechfiles_name'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value)]"
+                        },
+                        {
+                            "name": "AzureWebJobsStorage",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccounts_speechfiles_name'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value)]"
+                        },
+                        {
+                            "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+                            "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccounts_speechfiles_name'), ';AccountKey=', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccounts_speechfiles_name')), providers('Microsoft.Storage', 'storageAccounts').apiVersions[0]).keys[0].value)]"
+                        },
+                        {
+                            "name": "WEBSITE_CONTENTSHARE",
+                            "value": "[toLower(variables('functionAppName'))]"
+                        },
+                        {
+                            "name": "FUNCTIONS_EXTENSION_VERSION",
+                            "value": "~2"
+                        },
+                        {
+                            "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                            "value": "6.5.0"
+                        },
+                        {
+                            "name": "ResourceGroupName",
+                            "value": "[resourceGroup().name]"
+                        }
+                    ]
+                }
+            },
+            "resources": [
+                {
+                    "apiVersion": "2018-02-01",
+                    "name": "web",
+                    "type": "sourcecontrols",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Web/Sites', variables('functionAppName'))]"
+                    ],
+                    "properties": {
+                        "repoUrl": "https://github.com/msimecek/Pipeline-Manager",
+                        "branch": "master",
+                        "isManualIntegration": true
+                    }
+                },
+                {
+					"apiVersion": "2015-08-01",
+					"name": "web",
+					"type": "config",
+					"dependsOn": [
+						"[resourceId('Microsoft.Web/Sites', variables('functionAppName'))]"
+					],
+					"properties": {
+						"scmType": "ExternalGit"
+					}
+				}
+            ]
         },
         {
             "comments": "",
@@ -881,7 +947,7 @@
                                         ]
                                     },
                                     "type": "If"
-                                }
+                               }
                             },
                             "runAfter": {
                                 "List_textFiles_in_storage_account": [
@@ -1000,7 +1066,7 @@
                                     {
                                         "name": "textFiles",
                                         "type": "String"
-                                    }
+                                   }
                                 ]
                             }
                         },
@@ -1046,7 +1112,7 @@
                         },
                         "Response": {
                             "runAfter": {
-                                "Generate_languageInput_file_URI": [
+                                "Start_container": [
                                     "Succeeded"
                                 ]
                             },
@@ -1055,6 +1121,22 @@
                             "inputs": {
                                 "body": "Submitted process @{variables('processID')}",
                                 "statusCode": 200
+                            }
+                        },
+                        "Start_container": {
+                            "runAfter": {
+                                "Generate_languageInput_file_URI": [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Http",
+                            "inputs": {
+                                "body": {
+                                    "pipeline.audioFilesList": "@{variables('audioFiles')}",
+                                    "pipeline.processName": "@{triggerBody()?['processName']}"
+                                },
+                                "method": "POST",
+                                "uri": "https://pipdeploytest.azurewebsites.net/api/Start"
                             }
                         }
                     },
