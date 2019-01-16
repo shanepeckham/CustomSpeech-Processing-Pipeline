@@ -103,7 +103,7 @@ def main(argv):
     PASS3_THRESHOLD = 72
 
     try:
-        print("Getting arsg")
+        print("Getting args")
         opts, args = getopt.getopt(argv, "t:a:g:", ["TRANSCRIBED=", "AUDIO_PROCESSED=", "GENERATED_TRANSCRIPT="])
         print(opts, args)
     except getopt.GetoptError:
