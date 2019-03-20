@@ -74,6 +74,7 @@ def main(argv):
     files_action_needed = 0
     files_silent = 0
     global nlp_api_response
+    utf8stdout = open(1, 'w', encoding='utf-8', closefd=False) # 1 = stdout
 
     # Slide sentences to the left and right for better matching but uses more CPU
     WORD_SLIDE = 20
@@ -143,8 +144,8 @@ def main(argv):
                 api_text = api_text.replace('\r', '')
                 nlp_api_response = nlp(api_text)
                 nlp_api_response_len = len(nlp_api_response)
-                print("Processing file: ", filename)
-                print("***API Response*** for ", api_text)
+                print("Processing file: ", filename, file=utf8stdout)
+                print("***API Response*** for ", api_text, file=utf8stdout)
 
                 source = nlp(api_text)
                 source_length = len(source)
@@ -247,7 +248,7 @@ def main(argv):
                                 files_action_needed += 1
                                 continue
 
-                print("***Matched text***", match['Text'][match.index.values[0]])
+                print("***Matched text***", match['Text'][match.index.values[0]], file=utf8stdout)
                 print("Transcription Accuracy:", '{:0.0f}%'.format(match['Score'][match.index.values[0]] * 100))
                 print("\n")
                 score_results.append(match['Score'][match.index.values[0]])
