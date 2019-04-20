@@ -1,6 +1,9 @@
-# Batch transcriber (aka Batcher)
+# (Deprecated) Batch transcriber (aka Batcher)
 
 This script takes all files from a specified folder and sends them for transcription to the Speech Service.
+
+> Note: While this script still works, it was rewritten in Python to work with the official Speech SDK and to remove the need to install additional dependency (NPM). 
+> See Batcher-Py in this repo for the Python version.
 
 ## Usage
 
