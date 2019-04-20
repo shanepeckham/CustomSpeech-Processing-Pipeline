@@ -34,7 +34,10 @@ def main():
     if os.path.exists(args.output):
         print('WARNING: Output file {} exists. Lines will be added to it.'.format(args.output))
     
-    speech_config = speechsdk.SpeechConfig(subscription=args.key, region=args.region)
+    if args.endpoint == '':
+        speech_config = speechsdk.SpeechConfig(subscription=args.key, region=args.region)
+    else:
+        speech_config = speechsdk.SpeechConfig(subscription=args.key, region=args.region, endpoint=args.endpoint)
     
     source_dir = args.input
     files = os.listdir(source_dir)
