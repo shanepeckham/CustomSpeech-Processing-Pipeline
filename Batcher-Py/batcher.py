@@ -45,7 +45,7 @@ def main():
     results = []
     for file in files:
         result = recognizeSpeech(source_dir + file)
-        if result.text != "":
+        if result is not None and result.text != "":
             result_line = "{}\t{}\t{}\n".format(result.offset, file, result.text)
             print(result_line)
             try:
