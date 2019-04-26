@@ -37,7 +37,8 @@ def main():
     if args.endpoint == '':
         speech_config = speechsdk.SpeechConfig(subscription=args.key, region=args.region)
     else:
-        speech_config = speechsdk.SpeechConfig(subscription=args.key, region=args.region, endpoint=args.endpoint)
+        speech_config = speechsdk.SpeechConfig(subscription=args.key, region=args.region)
+        speech_config.endpointId = args.endpoint
     
     source_dir = args.input
     files = os.listdir(source_dir)
